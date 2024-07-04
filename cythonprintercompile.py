@@ -1,38 +1,43 @@
 import numpy as np
-import os
+from Cython.Compiler import Options
+from setuptools import Extension, setup
+from Cython.Build import cythonize
+import sys
 import platform
+import os
 
+iswindows = "win" in platform.platform().lower()
 numpyincludefolder = np.get_include()
 name = "cythonprinter"
 
-iswindows = platform.system() == "Windows"
-# Explanation: https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html
-# Most of the time, I use this configuration:
-optionsdict = {
-    "Options.docstrings": False,
-    "Options.embed_pos_in_docstring": False,
-    "Options.generate_cleanup_code": False,
-    "Options.clear_to_none": True,
-    "Options.annotate": True,
-    "Options.fast_fail": False,
-    "Options.warning_errors": False,
-    "Options.error_on_unknown_names": True,
-    "Options.error_on_uninitialized": True,
-    "Options.convert_range": True,
-    "Options.cache_builtins": True,
-    "Options.gcc_branch_hints": True,
-    "Options.lookup_module_cpdef": False,
-    "Options.embed": False,
-    "Options.cimport_from_pyx": False,
-    "Options.buffer_max_dims": 8,
-    "Options.closure_freelist_size": 8,
-}
+Options.docstrings = False
+Options.embed_pos_in_docstring = False
+Options.generate_cleanup_code = False
+Options.clear_to_none = True
+Options.annotate = True
+Options.fast_fail = False
+Options.warning_errors = False
+Options.error_on_unknown_names = True
+Options.error_on_uninitialized = True
+Options.convert_range = True
+Options.cache_builtins = True
+Options.gcc_branch_hints = True
+Options.lookup_module_cpdef = False
+Options.embed = False
+Options.cimport_from_pyx = False
+Options.buffer_max_dims = 8
+
+
+Options.closure_freelist_size = 8
 
 configdict = {
     "py_limited_api": False,
     "name": name,
     "sources": [name + ".pyx"],
-    "include_dirs": [numpyincludefolder],
+    "include_dirs": [
+        numpyincludefolder,
+        
+    ],
     "define_macros": [
         ("NPY_NO_DEPRECATED_API", 1),
         ("NPY_1_7_API_VERSION", 1),
@@ -70,7 +75,7 @@ compiler_directives = {
     "initializedcheck": False,
     "nonecheck": False,
     "overflowcheck": False,
-    "overflowcheck.fold": True,
+    "overflowcheck.fold": False,
     "embedsignature": False,
     "embedsignature.format": "c",  # (c / python / clinic)
     "cdivision": True,
@@ -83,7 +88,7 @@ compiler_directives = {
     "infer_types": True,
     "language_level": 3,  # (2/3/3str)
     "c_string_type": "bytes",  # (bytes / str / unicode)
-    "c_string_encoding": "default",  # (ascii, default, utf-8, etc.)
+    "c_string_encoding": "ascii",  # (ascii, default, utf-8, etc.)
     "type_version_tag": False,
     "unraisable_tracebacks": True,
     "iterable_coroutine": True,
@@ -93,29 +98,22 @@ compiler_directives = {
     "legacy_implicit_noexcept": False,
     "optimize.use_switch": True,
     "optimize.unpack_method_calls": True,
-    "warn.undeclared": False,  # (default False)
+    "warn.undeclared": True,  # (default False)
     "warn.unreachable": True,  # (default True)
-    "warn.maybe_uninitialized": False,  # (default False)
-    "warn.unused": False,  # (default False)
-    "warn.unused_arg": False,  # (default False)
-    "warn.unused_result": False,  # (default False)
+    "warn.maybe_uninitialized": True,  # (default False)
+    "warn.unused": True,  # (default False)
+    "warn.unused_arg": True,  # (default False)
+    "warn.unused_result": True,  # (default False)
     "warn.multiple_declarators": True,  # (default True)
     "show_performance_hints": True,  # (default True)
 }
-
 compdi = configdict
 clidict = compiler_directives
-from Cython.Compiler import Options
-import re
 
-for key, value in optionsdict.items():
-    check1 = re.findall(r"^Options\.[a-z_]+$", str(key))
-    check2 = re.findall(r"^(True|False|\d+)$", str(value))
-    if check1 and check2:
-        exec(f"{key} = {value}", globals())
-from setuptools import Extension, setup
-from Cython.Build import cythonize
+ext_modules = Extension(**configdict)
 
-ext_modules = Extension(**compdi)
-
-setup(name=name, ext_modules=cythonize(ext_modules, compiler_directives=clidict))
+setup(
+    name=name,
+    ext_modules=cythonize(ext_modules, compiler_directives=compiler_directives),
+)
+sys.exit(0)
