@@ -5,68 +5,66 @@ cimport numpy as np
 import pandas as pd
 
 asciifunc = np.frompyfunc(ascii, 1, 1)
-ResetAll = "\033[0m"
-
-Bold = "\033[1m"
-Dim = "\033[2m"
-Underlined = "\033[4m"
-Blink = "\033[5m"
-Reverse = "\033[7m"
-Hidden = "\033[8m"
-
-ResetBold = "\033[21m"
-ResetDim = "\033[22m"
-ResetUnderlined = "\033[24m"
-ResetBlink = "\033[25m"
-ResetReverse = "\033[27m"
-ResetHidden = "\033[28m"
-
-Default = "\033[39m"
-Black = "\033[30m"
-Red = "\033[31m"
-Green = "\033[32m"
-Yellow = "\033[33m"
-Blue = "\033[34m"
-Magenta = "\033[35m"
-Cyan = "\033[36m"
-LightGray = "\033[37m"
-DarkGray = "\033[90m"
-LightRed = "\033[91m"
-LightGreen = "\033[92m"
-LightYellow = "\033[93m"
-LightBlue = "\033[94m"
-LightMagenta = "\033[95m"
-LightCyan = "\033[96m"
-White = "\033[97m"
-
-BackgroundDefault = "\033[49m"
-BackgroundBlack = "\033[40m"
-BackgroundRed = "\033[41m"
-BackgroundGreen = "\033[42m"
-BackgroundYellow = "\033[43m"
-BackgroundBlue = "\033[44m"
-BackgroundMagenta = "\033[45m"
-BackgroundCyan = "\033[46m"
-BackgroundLightGray = "\033[47m"
-BackgroundDarkGray = "\033[100m"
-BackgroundLightRed = "\033[101m"
-BackgroundLightGreen = "\033[102m"
-BackgroundLightYellow = "\033[103m"
-BackgroundLightBlue = "\033[104m"
-BackgroundLightMagenta = "\033[105m"
-BackgroundLightCyan = "\033[106m"
-BackgroundWhite = "\033[107m"
+reprfunc = np.frompyfunc(repr, 1, 1)
+cdef:
+    str ResetAll = "\033[0m"
+    str Bold = "\033[1m"
+    str Dim = "\033[2m"
+    str Underlined = "\033[4m"
+    str Blink = "\033[5m"
+    str Reverse = "\033[7m"
+    str Hidden = "\033[8m"
+    str ResetBold = "\033[21m"
+    str ResetDim = "\033[22m"
+    str ResetUnderlined = "\033[24m"
+    str ResetBlink = "\033[25m"
+    str ResetReverse = "\033[27m"
+    str ResetHidden = "\033[28m"
+    str Default = "\033[39m"
+    str Black = "\033[30m"
+    str Red = "\033[31m"
+    str Green = "\033[32m"
+    str Yellow = "\033[33m"
+    str Blue = "\033[34m"
+    str Magenta = "\033[35m"
+    str Cyan = "\033[36m"
+    str LightGray = "\033[37m"
+    str DarkGray = "\033[90m"
+    str LightRed = "\033[91m"
+    str LightGreen = "\033[92m"
+    str LightYellow = "\033[93m"
+    str LightBlue = "\033[94m"
+    str LightMagenta = "\033[95m"
+    str LightCyan = "\033[96m"
+    str White = "\033[97m"
+    str BackgroundDefault = "\033[49m"
+    str BackgroundBlack = "\033[40m"
+    str BackgroundRed = "\033[41m"
+    str BackgroundGreen = "\033[42m"
+    str BackgroundYellow = "\033[43m"
+    str BackgroundBlue = "\033[44m"
+    str BackgroundMagenta = "\033[45m"
+    str BackgroundCyan = "\033[46m"
+    str BackgroundLightGray = "\033[47m"
+    str BackgroundDarkGray = "\033[100m"
+    str BackgroundLightRed = "\033[101m"
+    str BackgroundLightGreen = "\033[102m"
+    str BackgroundLightYellow = "\033[103m"
+    str BackgroundLightBlue = "\033[104m"
+    str BackgroundLightMagenta = "\033[105m"
+    str BackgroundLightCyan = "\033[106m"
+    str BackgroundWhite = "\033[107m"
 
 
 
 cpdef str printdf(
-    df,
+    object df,
     Py_ssize_t column_rep=70,
     Py_ssize_t max_lines=70,
     Py_ssize_t max_colwidth=300,
     Py_ssize_t ljust_space=2,
     str sep=" | ",
-    cython.bint vtm_escape=True,
+    bint vtm_escape=True,
 ):
     cdef:
         dict[Py_ssize_t, np.ndarray] stringdict
@@ -90,19 +88,20 @@ cpdef str printdf(
     if len(df) > max_lines and max_lines > 0:
         a = df.iloc[:max_lines].reset_index(drop=False).T.__array__()
     else:
-        a = df.reset_index(drop=False).T.__array__()
+        a = df.iloc[:len(df)].reset_index(drop=False).T.__array__()
     stringlendict = {}
     try:
-        df_columns = ["index"] + [str(x) for x in df.columns]
+        df_columns = ["iloc"] + [str(x) for x in df.columns]
     except Exception:
         try:
-            df_columns = ["index",str(df.name)]
+            df_columns = ["iloc",str(df.name)]
         except Exception:
-            df_columns = ["index",str(0)]
+            df_columns = ["iloc",str(0)]
     len_a=len(a)
     for i in range(len_a):
         try:
-            stringdict[i] = a[i].astype("U")
+            #stringdict[i] = a[i].astype("U")
+            stringdict[i] = reprfunc(a[i]).astype("U")
         except Exception:
             stringdict[i] = asciifunc(a[i]).astype("U")
         stringlendict[i] = (stringdict[i].dtype.itemsize // 4) + ljust_space
@@ -131,13 +130,10 @@ cpdef str printdf(
                 print(dashesrep)
         counter += 1
         for k in range(len_stringdict):
-            string2print = stringdict[k][j][: stringlendict[k]].replace("\n",
-            "\\n").replace("\r", "\\r").ljust(stringlendict[k])
-            string2printcolored = (
-                colors2rotate[k % len(colors2rotate)] + string2print + ResetAll
-            )
-            print(string2printcolored, end=sep)
+            print((
+                colors2rotate[k % len(colors2rotate)] + stringdict[k][j][: stringlendict[k]].replace("\n",
+            "\\n").replace("\r", "\\r").ljust(stringlendict[k]) + ResetAll
+            ), end=sep)
         print()
     return ""
-
 

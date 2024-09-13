@@ -5,29 +5,19 @@ from pandas.core.frame import DataFrame, Series, Index
 try:
     from .cythonprinter import printdf as pdp
 except Exception:
-    import subprocess, os, sys, time, Cython, setuptools, numpy, platform
+    import subprocess, os, sys
 
-    iswindows = "win" in platform.platform().lower()
-    if iswindows:
-        addtolist = []
-    else:
-        addtolist = ["&"]
-
-    olddict = os.getcwd()
-    dirname = os.path.dirname(__file__)
-    os.chdir(dirname)
-    compile_file = os.path.join(dirname, "cythonprintercompile.py")
+    oldworkingdict = os.getcwd()
+    this_folder = os.sep.join(__file__.split(os.sep)[:-1])
+    os.chdir(this_folder)
+    compilefile = os.path.join(this_folder, "cythonprintercompile.py")
     subprocess.run(
-        " ".join([sys.executable, compile_file, "build_ext", "--inplace"] + addtolist),
+        [sys.executable, compilefile, "build_ext", "--inplace"],
+        env=os.environ.copy(),
         shell=True,
-        env=os.environ,
-        preexec_fn=None if iswindows else os.setpgrp,
     )
-    if not iswindows:
-        time.sleep(30)
+    os.chdir(oldworkingdict)
     from .cythonprinter import printdf as pdp
-
-    os.chdir(olddict)
 
 
 def print_col_width_len(df):
@@ -46,7 +36,7 @@ def print_col_width_len(df):
 
 
 def pandasprintcolor(self):
-    pdp(pd.DataFrame(self.__array__(), columns=[str(x) for x in self.columns]))
+    pdp(pd.DataFrame(self.reset_index().__array__(), columns=['index']+[str(x) for x in self.columns],copy=False))
     print_col_width_len(self.__array__())
 
     return ""
@@ -68,9 +58,9 @@ def copy_func(f):
 def pandasprintcolor_s(self):
     print("")
     try:
-        pdp(pd.DataFrame(self.__array__(), columns=[self.name]))
+        pdp(pd.DataFrame(self.reset_index().__array__(), columns=['index',self.name],copy=False))
     except Exception:
-        pdp(pd.DataFrame(self.__array__()))
+        pdp(pd.DataFrame(self.__array__(),copy=False))
     print_col_width_len(self.__array__())
 
     return ""
@@ -129,11 +119,12 @@ def substitute_print_with_color_print(
     pd.color_printer_reset = reset_print_options
     pd.color_printer_active = True
 
-
+#pdp(pd.DataFrame(self.reset_index().__array__(), columns=['index']+[str(x) for x in self.columns]))
+# pdp(pd.DataFrame(self.reset_index().__array__(), columns=['index',self.name]))
 def qq_ds_print_nolimit(self, **kwargs):
     try:
         pdp(
-            pd.DataFrame(self.__array__(), columns=[str(x) for x in self.columns]),
+            pd.DataFrame(self.reset_index().__array__(), columns=['index']+[str(x) for x in self.columns],copy=False),
             max_lines=0,
             **kwargs,
         )
@@ -141,12 +132,12 @@ def qq_ds_print_nolimit(self, **kwargs):
     except Exception:
         try:
             pdp(
-                pd.DataFrame(self.__array__(), columns=[self.name]),
+                pd.DataFrame(self.reset_index().__array__(), columns=['index',self.name],copy=False),
                 max_lines=0,
             )
         except Exception:
             pdp(
-                pd.DataFrame(self.__array__()),
+                pd.DataFrame(self.__array__(),copy=False),
                 max_lines=0,
             )
         print_col_width_len(self.__array__())
@@ -157,13 +148,14 @@ def qq_d_print_columns(self, **kwargs):
     pdp(
         pd.DataFrame(self.columns.__array__().reshape((-1, 1))),
         max_colwidth=0,
+        max_lines=0,
         **kwargs,
     )
     return ""
 
 
 def qq_ds_print_index(self, **kwargs):
-    pdp(pd.DataFrame(self.index.__array__().reshape((-1, 1))), max_colwidth=0, **kwargs)
+    pdp(pd.DataFrame(self.index.__array__().reshape((-1, 1))),    max_lines=0, max_colwidth=0, **kwargs)
     return ""
 
 
