@@ -5,18 +5,21 @@ from pandas.core.frame import DataFrame, Series, Index
 try:
     from .cythonprinter import printdf as pdp
 except Exception:
-    import subprocess, os, sys
+    import subprocess, os, sys, platform
+    from time import sleep as timesleep
 
-    oldworkingdict = os.getcwd()
-    this_folder = os.sep.join(__file__.split(os.sep)[:-1])
-    os.chdir(this_folder)
-    compilefile = os.path.join(this_folder, "cythonprintercompile.py")
-    subprocess.run(
-        [sys.executable, compilefile, "build_ext", "--inplace"],
-        env=os.environ.copy(),
-        shell=True,
-    )
-    os.chdir(oldworkingdict)
+    iswindows = "win" in platform.platform().lower()
+    olddict = os.getcwd()
+    dirname = os.path.dirname(__file__)
+    os.chdir(dirname)
+    files2compile = [
+        "cythonprintercompile.py",
+    ]
+    for file2compile in files2compile:
+        compile_file = os.path.join(dirname, file2compile)
+        os.system(" ".join([sys.executable, compile_file, "build_ext", "--inplace"]))
+        timesleep(1)
+    os.chdir(olddict)
     from .cythonprinter import printdf as pdp
 
 

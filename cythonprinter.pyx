@@ -57,23 +57,8 @@ cdef:
 
 
 
-cpdef str printdf(
-    object df,
-    Py_ssize_t column_rep=70,
-    Py_ssize_t max_lines=70,
-    Py_ssize_t max_colwidth=300,
-    Py_ssize_t ljust_space=2,
-    str sep=" | ",
-    bint vtm_escape=True,
-):
-    cdef:
-        dict[Py_ssize_t, np.ndarray] stringdict
-        dict[Py_ssize_t, Py_ssize_t] stringlendict
-        list[str] df_columns, allcolumns_as_string, colors2rotate
-        Py_ssize_t i, len_a, len_df_columns, lenstr, counter, j, len_stringdict0, k, len_stringdict
-        str stringtoprint, dashes, dashesrep, string2print, string2printcolored
-        np.ndarray a
-    colors2rotate = [
+cdef:
+    list[str] colors2rotate=[
         LightRed,
         LightGreen,
         LightYellow,
@@ -82,14 +67,36 @@ cpdef str printdf(
         LightCyan,
         White,
     ]
+
+@cython.nonecheck(True)
+cpdef printdf(
+    object df,
+    Py_ssize_t column_rep=70,
+    Py_ssize_t max_lines=0,
+    Py_ssize_t max_colwidth=300,
+    Py_ssize_t ljust_space=2,
+    str sep=" | ",
+    bint vtm_escape=True,
+):
+    cdef:
+        dict[Py_ssize_t, np.ndarray] stringdict= {}
+        dict[Py_ssize_t, Py_ssize_t] stringlendict= {}
+        list[str] df_columns, allcolumns_as_string
+        Py_ssize_t i, len_a, len_df_columns, lenstr, counter, j, len_stringdict0, k, len_stringdict
+        str stringtoprint, dashes, dashesrep
+        np.ndarray a
+        str tmpstring=""
+        list[str] tmplist=[]
+        str tmp_newline="\n"
+        str tmp_rnewline="\r"
+        str tmp_newline2="\\n"
+        str tmp_rnewline2="\\r"
     if vtm_escape:
         print('\033[12:2p')
-    stringdict = {}
     if len(df) > max_lines and max_lines > 0:
         a = df.iloc[:max_lines].reset_index(drop=False).T.__array__()
     else:
         a = df.iloc[:len(df)].reset_index(drop=False).T.__array__()
-    stringlendict = {}
     try:
         df_columns = ["iloc"] + [str(x) for x in df.columns]
     except Exception:
@@ -100,10 +107,9 @@ cpdef str printdf(
     len_a=len(a)
     for i in range(len_a):
         try:
-            #stringdict[i] = a[i].astype("U")
-            stringdict[i] = reprfunc(a[i]).astype("U")
+            stringdict[i] = np.array([repr(qx)[:max_colwidth] for qx in a[i]])
         except Exception:
-            stringdict[i] = asciifunc(a[i]).astype("U")
+            stringdict[i] = np.array([ascii(qx)[:max_colwidth] for qx in a[i]])
         stringlendict[i] = (stringdict[i].dtype.itemsize // 4) + ljust_space
     for i in range(len_a):
         lenstr = len(df_columns[i])
@@ -127,13 +133,14 @@ cpdef str printdf(
     for j in range(len_stringdict0):
         if column_rep > 0:
             if counter % column_rep == 0:
-                print(dashesrep)
+                tmplist.append(dashesrep)
         counter += 1
+        tmpstring=""
         for k in range(len_stringdict):
-            print((
-                colors2rotate[k % len(colors2rotate)] + stringdict[k][j][: stringlendict[k]].replace("\n",
-            "\\n").replace("\r", "\\r").ljust(stringlendict[k]) + ResetAll
-            ), end=sep)
-        print()
+            tmpstring+=((
+                f"{colors2rotate[k % len(colors2rotate)] + stringdict[k][j][: stringlendict[k]].replace(tmp_newline,tmp_newline2).replace(tmp_rnewline, tmp_rnewline2).ljust(stringlendict[k])}{ResetAll}{sep}"
+            ))
+        tmplist.append(tmpstring)
+    print("\n".join(tmplist))
     return ""
 
